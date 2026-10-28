@@ -1,0 +1,1284 @@
+```react
+import React, { useState, useEffect } from 'react';
+import { 
+  Send, Heart, MessageSquare, Repeat2, Bookmark, ShieldAlert, ShieldCheck, 
+  Trash2, Pin, Search, Moon, Sun, LogIn, LogOut, Lock, CheckCircle, AlertTriangle, 
+  Sparkles, SlidersHorizontal, Image as ImageIcon, X, Flag, User, Settings, Info, Bell,
+  ChevronRight, Share2, HelpCircle, BarChart3, Vote, Eye, Filter, Check, Shield
+} from 'lucide-react';
+
+export default function App() {
+  // --- States ---
+  const [theme, setTheme] = useState('dark');
+  const [user, setUser] = useState(null); // { email, name, role, provider, avatar }
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authStep, setAuthStep] = useState('select'); // 'select' | 'google' | 'apple' | 'owner_pass'
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [showOwnerDashboard, setShowOwnerDashboard] = useState(false);
+
+  // Blacklist words for Auto-Moderation
+  const [blacklistWords, setBlacklistWords] = useState(['kasar', 'scam', 'jual', 'promosi', 'judol', 'benci']);
+  const [newBlacklistWord, setNewBlacklistWord] = useState('');
+
+  // Bookmarks State
+  const [bookmarkedIds, setBookmarkedIds] = useState([]);
+
+  // Menfess Posts State
+  const [posts, setPosts] = useState([
+    {
+      id: 'MNFSS-8921',
+      author: 'Anonim #8921',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+      time: '10m lalu',
+      timestamp: Date.now() - 1000 * 60 * 10,
+      content: 'Jujur cape banget kuliah semester akhir, revisi skripsi terus diping-pong dosen pembimbing. Ada tips n trik buat ngadepin dosen yg slow response gasih guys? 😭💔 [Trigger Warning: Burnout]',
+      tag: 'Curhat',
+      tw: true,
+      likes: 142,
+      retweets: 18,
+      comments: [
+        { id: 'c1', author: 'Anonim #302', isOwner: false, time: '8m lalu', text: 'Semangat ka! Coba datengin pas jam praktek atau ruang dosen langsung!' },
+        { id: 'c2', author: '👑 Owner Base', isOwner: true, time: '5m lalu', text: 'Semangat terus ya! Kalau ada kendala sistemik bisa lapor ke dekanat.' }
+      ],
+      isLiked: false,
+      isPinned: true,
+      status: 'approved',
+      image: null,
+      poll: {
+        question: 'Berapa lama revisi skripsi kalian biasanya?',
+        options: [
+          { text: '< 3 Hari', votes: 42 },
+          { text: '1 Minggu', votes: 110 },
+          { text: '> 2 Minggu / Berbulan-bulan', votes: 235 }
+        ],
+        totalVotes: 387,
+        votedOption: null
+      }
+    },
+    {
+      id: 'MNFSS-8920',
+      author: 'Anonim #3310',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+      time: '32m lalu',
+      timestamp: Date.now() - 1000 * 60 * 32,
+      content: 'Rekomendasi cafe ramah kantong mahasiswa sekitaran Jaksel dong yang wifi-nya kenceng & banyak colokan! Buat wfh/nugas asik.',
+      tag: 'Tanya',
+      tw: false,
+      likes: 89,
+      retweets: 12,
+      comments: [
+        { id: 'c3', author: 'Anonim #901', isOwner: false, time: '20m lalu', text: 'Coba ke daerah Tebet mas, banyak bgt pilihan ramah kantong.' }
+      ],
+      isLiked: true,
+      isPinned: false,
+      status: 'approved',
+      image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80',
+      poll: null
+    },
+    {
+      id: 'MNFSS-8919',
+      author: 'Anonim #0042',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+      time: '1j lalu',
+      timestamp: Date.now() - 1000 * 60 * 60,
+      content: 'Halo gaess! Ada yang minat join study group online buat persiapin tes CPNS / BUMN bareng-bareng ga? reply ya nanti tak bikinin grup DC / WA!',
+      tag: 'Komunitas',
+      tw: false,
+      likes: 215,
+      retweets: 45,
+      comments: [],
+      isLiked: false,
+      isPinned: false,
+      status: 'approved',
+      image: null,
+      poll: null
+    },
+    {
+      id: 'MNFSS-8918',
+      author: 'Anonim #7712',
+      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80',
+      time: '2j lalu',
+      timestamp: Date.now() - 1000 * 60 * 120,
+      content: 'Postingan ini mengandung kata promosi judi terlarang (judol) sehingga otomatis masuk peninjauan.',
+      tag: 'ModCheck',
+      tw: true,
+      likes: 2,
+      retweets: 0,
+      comments: [],
+      isLiked: false,
+      isPinned: false,
+      status: 'pending',
+      image: null,
+      poll: null
+    }
+  ]);
+
+  // Form State
+  const [newPostContent, setNewPostContent] = useState('');
+  const [newPostTag, setNewPostTag] = useState('Curhat');
+  const [isTW, setIsTW] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  
+  // Poll Creation State
+  const [showPollForm, setShowPollForm] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+
+  const [activeTab, setActiveTab] = useState('terbaru'); // 'terbaru' | 'trending' | 'pending' | 'saved'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCommentPost, setActiveCommentPost] = useState(null);
+  const [commentInput, setCommentInput] = useState('');
+  const [notification, setNotification] = useState(null);
+
+  // Auto notification clear
+  const showToast = (msg, type = 'info') => {
+    setNotification({ msg, type });
+    setTimeout(() => setNotification(null), 3500);
+  };
+
+  // Toggle Theme
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  // Login Handlers
+  const handleSocialLogin = (provider) => {
+    if (provider === 'Google') {
+      const inputEmail = prompt('Masukkan Email Google Anda:', 'shabikzanuar21@gmail.com');
+      if (!inputEmail) return;
+
+      if (inputEmail.toLowerCase() === 'shabikzanuar21@gmail.com') {
+        setAuthStep('owner_pass');
+        setLoginEmail('shabikzanuar21@gmail.com');
+      } else {
+        setUser({
+          email: inputEmail,
+          name: inputEmail.split('@')[0],
+          role: 'user',
+          provider: 'Google',
+          avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${inputEmail}`
+        });
+        setShowAuthModal(false);
+        showToast(`Berhasil masuk sebagai ${inputEmail} via Google`, 'success');
+      }
+    } else if (provider === 'Apple') {
+      setUser({
+        email: 'user.apple.id@privaterelay.appleid.com',
+        name: 'Apple User',
+        role: 'user',
+        provider: 'Apple',
+        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80'
+      });
+      setShowAuthModal(false);
+      showToast('Berhasil masuk dengan Apple ID', 'success');
+    }
+  };
+
+  const handleOwnerAuth = (e) => {
+    e.preventDefault();
+    if (loginEmail === 'shabikzanuar21@gmail.com' && loginPassword === 'shabikzanuar21') {
+      setUser({
+        email: 'shabikzanuar21@gmail.com',
+        name: 'Shabik Zanuar (Base Owner)',
+        role: 'owner',
+        provider: 'Google Verified',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
+      });
+      setShowAuthModal(false);
+      setLoginPassword('');
+      setAuthError('');
+      showToast('👑 Login berhasil! Anda memiliki akses Penuh Pemilik Base (Owner).', 'success');
+    } else {
+      setAuthError('Password Pemilik Base salah! Silakan coba lagi.');
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setShowOwnerDashboard(false);
+    showToast('Anda telah keluar dari sesi.', 'info');
+  };
+
+  // Auto-Moderation Engine Check
+  const containsBlacklistedWord = (text) => {
+    const lower = text.toLowerCase();
+    return blacklistWords.some(word => lower.includes(word.toLowerCase()));
+  };
+
+  // Post Submission
+  const handleCreatePost = (e) => {
+    e.preventDefault();
+    if (!newPostContent.trim()) return;
+
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    const hasBlockedWord = containsBlacklistedWord(newPostContent);
+    const isPending = user.role !== 'owner' && (hasBlockedWord || newPostContent.length > 250);
+
+    // Build poll structure if created
+    let pollData = null;
+    if (showPollForm && pollQuestion.trim() && pollOptions.filter(o => o.trim()).length >= 2) {
+      pollData = {
+        question: pollQuestion,
+        options: pollOptions.filter(o => o.trim()).map(optText => ({ text: optText, votes: 0 })),
+        totalVotes: 0,
+        votedOption: null
+      };
+    }
+
+    const newPost = {
+      id: `MNFSS-${Math.floor(1000 + Math.random() * 9000)}`,
+      author: user.role === 'owner' ? '👑 Owner Base' : `Anonim #${Math.floor(1000 + Math.random() * 9000)}`,
+      avatar: user.role === 'owner' ? user.avatar : `https://api.dicebear.com/7.x/identicon/svg?seed=${Date.now()}`,
+      time: 'Baru saja',
+      timestamp: Date.now(),
+      content: newPostContent,
+      tag: newPostTag,
+      tw: isTW,
+      likes: 0,
+      retweets: 0,
+      comments: [],
+      isLiked: false,
+      isPinned: false,
+      status: isPending ? 'pending' : 'approved',
+      image: selectedImage,
+      poll: pollData
+    };
+
+    setPosts([newPost, ...posts]);
+    setNewPostContent('');
+    setSelectedImage(null);
+    setIsTW(false);
+    setShowPollForm(false);
+    setPollQuestion('');
+    setPollOptions(['', '']);
+
+    if (isPending) {
+      showToast('Menfess dikirim dan masuk antrean Moderasi Pemilik Base (Filter Kata Terlarang).', 'warning');
+    } else {
+      showToast('Menfess Anda berhasil terkirim ke publik!', 'success');
+    }
+  };
+
+  // Vote on Poll Action
+  const handleVotePoll = (postId, optionIdx) => {
+    setPosts(posts.map(p => {
+      if (p.id === postId && p.poll && p.poll.votedOption === null) {
+        const updatedOptions = p.poll.options.map((opt, idx) => 
+          idx === optionIdx ? { ...opt, votes: opt.votes + 1 } : opt
+        );
+        return {
+          ...p,
+          poll: {
+            ...p.poll,
+            options: updatedOptions,
+            totalVotes: p.poll.totalVotes + 1,
+            votedOption: optionIdx
+          }
+        };
+      }
+      return p;
+    }));
+    showToast('Suara Anda berhasil ditambahkan ke polling!', 'success');
+  };
+
+  // Moderation / Post Actions
+  const handleLike = (id) => {
+    setPosts(posts.map(p => {
+      if (p.id === id) {
+        return {
+          ...p,
+          likes: p.isLiked ? p.likes - 1 : p.likes + 1,
+          isLiked: !p.isLiked
+        };
+      }
+      return p;
+    }));
+  };
+
+  const handleBookmark = (id) => {
+    if (bookmarkedIds.includes(id)) {
+      setBookmarkedIds(bookmarkedIds.filter(bId => bId !== id));
+      showToast('Dihapus dari bookmark', 'info');
+    } else {
+      setBookmarkedIds([...bookmarkedIds, id]);
+      showToast('Disimpan ke bookmark!', 'success');
+    }
+  };
+
+  const handlePin = (id) => {
+    if (user?.role !== 'owner') return;
+    setPosts(posts.map(p => p.id === id ? { ...p, isPinned: !p.isPinned } : p));
+    showToast('Status pin postingan diperbarui', 'info');
+  };
+
+  const handleDelete = (id) => {
+    if (user?.role !== 'owner') return;
+    setPosts(posts.filter(p => p.id !== id));
+    showToast('Postingan telah dihapus oleh Pemilik Base', 'warning');
+  };
+
+  const handleApprove = (id) => {
+    if (user?.role !== 'owner') return;
+    setPosts(posts.map(p => p.id === id ? { ...p, status: 'approved' } : p));
+    showToast('Postingan disetujui & dipublikasikan!', 'success');
+  };
+
+  const handleAddComment = (postId) => {
+    if (!commentInput.trim()) return;
+    setPosts(posts.map(p => {
+      if (p.id === postId) {
+        return {
+          ...p,
+          comments: [
+            ...p.comments,
+            {
+              id: `c_${Date.now()}`,
+              author: user?.role === 'owner' ? '👑 Owner Base' : `Anonim #${Math.floor(100 + Math.random() * 900)}`,
+              isOwner: user?.role === 'owner',
+              time: 'Baru saja',
+              text: commentInput
+            }
+          ]
+        };
+      }
+      return p;
+    }));
+    setCommentInput('');
+  };
+
+  // Blacklist Manager
+  const handleAddBlacklistWord = (e) => {
+    e.preventDefault();
+    if (!newBlacklistWord.trim()) return;
+    if (!blacklistWords.includes(newBlacklistWord.toLowerCase().trim())) {
+      setBlacklistWords([...blacklistWords, newBlacklistWord.toLowerCase().trim()]);
+      showToast(`Kata "${newBlacklistWord}" ditambahkan ke Auto-Moderation filter`, 'success');
+    }
+    setNewBlacklistWord('');
+  };
+
+  const handleRemoveBlacklistWord = (word) => {
+    setBlacklistWords(blacklistWords.filter(w => w !== word));
+    showToast(`Kata "${word}" dihapus dari filter`, 'info');
+  };
+
+  // Filtering Posts
+  const filteredPosts = posts.filter(p => {
+    const matchesSearch = p.content.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          p.tag.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          p.id.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    if (activeTab === 'saved') return bookmarkedIds.includes(p.id);
+    if (activeTab === 'terbaru') return p.status === 'approved';
+    if (activeTab === 'trending') return p.status === 'approved';
+    if (activeTab === 'pending') return p.status === 'pending';
+    return true;
+  }).sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    if (activeTab === 'trending') return b.likes - a.likes;
+    return b.timestamp - a.timestamp;
+  });
+
+  const pendingCount = posts.filter(p => p.status === 'pending').length;
+  const approvedCount = posts.filter(p => p.status === 'approved').length;
+
+  return (
+    <div className={`min-h-screen font-sans transition-colors duration-200 ${
+      theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    }`}>
+
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md text-sm font-medium border animate-bounce transition-all duration-300"
+          style={{
+            backgroundColor: theme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+            borderColor: notification.type === 'success' ? '#22c55e' : notification.type === 'warning' ? '#f59e0b' : '#3b82f6',
+            color: theme === 'dark' ? '#fff' : '#0f172a'
+          }}>
+          {notification.type === 'success' && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+          {notification.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
+          {notification.type === 'info' && <Info className="w-5 h-5 text-blue-500" />}
+          <span>{notification.msg}</span>
+        </div>
+      )}
+
+      {/* Main Header */}
+      <header className={`sticky top-0 z-40 border-b backdrop-blur-md transition-colors ${
+        theme === 'dark' ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-200'
+      }`}>
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          
+          {/* Logo & Platform Name */}
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowOwnerDashboard(false)}>
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-cyan-500/20">
+              m.
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-lg leading-tight tracking-tight">Menfess.id</h1>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  Base Auto v2
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">Curhat & Kirim Pesan Anonim</p>
+            </div>
+          </div>
+
+          {/* Right Header Controls */}
+          <div className="flex items-center gap-3">
+            {/* Owner Dashboard Toggle Button */}
+            {user?.role === 'owner' && (
+              <button
+                onClick={() => setShowOwnerDashboard(!showOwnerDashboard)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                  showOwnerDashboard 
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/20' 
+                    : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard Owner</span>
+              </button>
+            )}
+
+            {/* Theme Toggle */}
+            <button 
+              onClick={toggleTheme}
+              className={`p-2.5 rounded-xl border transition-all ${
+                theme === 'dark' 
+                  ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700' 
+                  : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+              }`}
+              title="Ganti Tema"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            {/* Auth Profile / Login Button */}
+            {user ? (
+              <div className="flex items-center gap-2">
+                {user.role === 'owner' ? (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    <div className="text-left hidden sm:block">
+                      <p className="text-xs font-bold leading-none">Pemilik Base</p>
+                      <p className="text-[10px] text-amber-400/80 truncate max-w-[120px]">{user.email}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-200">
+                    <User className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-medium max-w-[100px] truncate hidden sm:inline">{user.name}</span>
+                  </div>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all"
+                  title="Keluar"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setShowAuthModal(true); setAuthStep('select'); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white text-xs font-bold shadow-lg shadow-cyan-500/25 transition-all transform active:scale-95"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Masuk / Login</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Owner Admin Dashboard View */}
+      {showOwnerDashboard && user?.role === 'owner' ? (
+        <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div>
+              <h2 className="text-xl font-bold flex items-center gap-2 text-amber-400">
+                <BarChart3 className="w-6 h-6" /> Panel Kontrol Pemilik Base (shabikzanuar21@gmail.com)
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">Kelola statistik, moderasi kata terlarang, dan persetujuan postingan.</p>
+            </div>
+            <button
+              onClick={() => setShowOwnerDashboard(false)}
+              className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold transition-all"
+            >
+              Kembali ke Feed
+            </button>
+          </div>
+
+          {/* Key Metrics Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <p className="text-xs text-slate-400 font-semibold uppercase">Total Posts</p>
+              <h3 className="text-2xl font-extrabold text-cyan-400 mt-1">{posts.length}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">Dipublikasi & pending</p>
+            </div>
+
+            <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <p className="text-xs text-slate-400 font-semibold uppercase">Membutuhkan Moderasi</p>
+              <h3 className="text-2xl font-extrabold text-amber-400 mt-1">{pendingCount}</h3>
+              <p className="text-[10px] text-amber-500/80 mt-1">Antrean kata terlarang / TW</p>
+            </div>
+
+            <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <p className="text-xs text-slate-400 font-semibold uppercase">Total Disetujui</p>
+              <h3 className="text-2xl font-extrabold text-emerald-400 mt-1">{approvedCount}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">Aktif di timeline</p>
+            </div>
+
+            <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <p className="text-xs text-slate-400 font-semibold uppercase">Filter Kata Terlarang</p>
+              <h3 className="text-2xl font-extrabold text-rose-400 mt-1">{blacklistWords.length}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">Aktif auto-moderation</p>
+            </div>
+          </div>
+
+          {/* Auto-Moderation Blacklist Settings */}
+          <div className={`p-6 rounded-2xl border space-y-4 ${theme === 'dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2 text-rose-400">
+              <Shield className="w-4 h-4" /> Kelola Filter Kata Terlarang (Auto Moderation)
+            </h3>
+            <p className="text-xs text-slate-400">
+              Setiap postingan yang mengandung kata-kata di bawah ini secara otomatis ditangguhkan ke status **Pending Moderasi**.
+            </p>
+
+            <form onSubmit={handleAddBlacklistWord} className="flex gap-2">
+              <input
+                type="text"
+                value={newBlacklistWord}
+                onChange={(e) => setNewBlacklistWord(e.target.value)}
+                placeholder="Tambah kata terlarang baru (cth: judi, kasar, hoax)..."
+                className={`flex-1 px-4 py-2 rounded-xl text-xs border outline-none ${
+                  theme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-800'
+                }`}
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition-all"
+              >
+                + Tambah Filter
+              </button>
+            </form>
+
+            <div className="flex flex-wrap gap-2 pt-2">
+              {blacklistWords.map((word, idx) => (
+                <span key={idx} className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono">
+                  {word}
+                  <button onClick={() => handleRemoveBlacklistWord(word)} className="hover:text-white">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        </main>
+      ) : (
+
+      /* Standard Main Layout Container */
+      <main className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {/* Left Sidebar Info & Stats */}
+        <aside className="lg:col-span-3 space-y-4">
+          
+          {/* Base Info Card */}
+          <div className={`p-4 rounded-2xl border transition-colors ${
+            theme === 'dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="font-bold text-sm">Menfess Indonesia</h2>
+                <p className="text-xs text-slate-400">@menfess_id</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed mb-4">
+              Wadah menfess otomatis terbesar. Kirim unek-unek, pertanyaan, & cerita kamu secara anonim di sini.
+            </p>
+
+            <div className="pt-3 border-t border-slate-800/50 grid grid-cols-2 gap-2 text-center">
+              <div className="p-2 rounded-xl bg-slate-800/40">
+                <p className="text-lg font-extrabold text-cyan-400">{posts.length}</p>
+                <p className="text-[10px] text-slate-400 uppercase font-semibold">Total Menfess</p>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-800/40">
+                <p className="text-lg font-extrabold text-emerald-400">12.4K</p>
+                <p className="text-[10px] text-slate-400 uppercase font-semibold">Pengguna</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Owner Status Banner */}
+          <div className={`p-4 rounded-2xl border ${
+            user?.role === 'owner' 
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+              : theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <div className="flex items-start gap-3">
+              <ShieldCheck className={`w-5 h-5 flex-shrink-0 mt-0.5 ${user?.role === 'owner' ? 'text-amber-400' : 'text-slate-400'}`} />
+              <div>
+                <h3 className="text-xs font-bold mb-1">Status Pemilik Base</h3>
+                <p className="text-[11px] text-slate-400 leading-normal">
+                  {user?.role === 'owner' ? (
+                    <span className="text-amber-300 font-medium">
+                      Anda login sebagai Owner (<span className="underline">shabikzanuar21@gmail.com</span>). Anda memiliki wewenang penuh untuk verifikasi, Hapus, dan Pin postingan.
+                    </span>
+                  ) : (
+                    <span>
+                      Pemilik Terverifikasi Base ini adalah <strong className="text-slate-300">shabikzanuar21@gmail.com</strong>.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Guidelines Links */}
+          <div className={`p-4 rounded-2xl border text-xs space-y-2 ${
+            theme === 'dark' ? 'bg-slate-900/40 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+          }`}>
+            <p className="font-bold text-slate-300 mb-2">Panduan Komunitas</p>
+            <div className="flex items-center gap-2 hover:text-cyan-400 cursor-pointer transition-colors">
+              <ChevronRight className="w-3 h-3" /> Gunakan kata kunci sensitif [TW]
+            </div>
+            <div className="flex items-center gap-2 hover:text-cyan-400 cursor-pointer transition-colors">
+              <ChevronRight className="w-3 h-3" /> Dilarang Doxxing & Ujaran Benci
+            </div>
+            <div className="flex items-center gap-2 hover:text-cyan-400 cursor-pointer transition-colors">
+              <ChevronRight className="w-3 h-3" /> Gunakan tag yang sesuai
+            </div>
+          </div>
+
+        </aside>
+
+        {/* Center Main Feed Content */}
+        <section className="lg:col-span-6 space-y-4">
+
+          {/* Menfess Creator Form */}
+          <div className={`p-4 rounded-2xl border transition-all ${
+            theme === 'dark' ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <form onSubmit={handleCreatePost} className="space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800/40">
+                <span className="text-xs font-bold flex items-center gap-1.5 text-cyan-400">
+                  <Send className="w-3.5 h-3.5" /> Kirim Menfess Anonim
+                </span>
+                <span className={`text-[11px] font-mono ${
+                  newPostContent.length > 280 ? 'text-red-400 font-bold' : 'text-slate-400'
+                }`}>
+                  {newPostContent.length} / 280
+                </span>
+              </div>
+
+              <textarea
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+                placeholder="Tulis pesan anonim kamu di sini... (Gunakan hashtag/tag yang jelas)"
+                rows={3}
+                maxLength={280}
+                className={`w-full bg-transparent resize-none text-sm focus:outline-none placeholder:text-slate-500 ${
+                  theme === 'dark' ? 'text-slate-100' : 'text-slate-800'
+                }`}
+              />
+
+              {/* Poll Builder Sub-Form */}
+              {showPollForm && (
+                <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
+                      <Vote className="w-3.5 h-3.5" /> Buat Polling Anonim
+                    </span>
+                    <button type="button" onClick={() => setShowPollForm(false)} className="text-slate-400 hover:text-white">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={pollQuestion}
+                    onChange={(e) => setPollQuestion(e.target.value)}
+                    placeholder="Pertanyaan polling..."
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white outline-none"
+                  />
+                  {pollOptions.map((opt, idx) => (
+                    <input
+                      key={idx}
+                      type="text"
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...pollOptions];
+                        newOpts[idx] = e.target.value;
+                        setPollOptions(newOpts);
+                      }}
+                      placeholder={`Opsi ${idx + 1}`}
+                      className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white outline-none"
+                    />
+                  ))}
+                  {pollOptions.length < 4 && (
+                    <button
+                      type="button"
+                      onClick={() => setPollOptions([...pollOptions, ''])}
+                      className="text-[11px] text-cyan-400 hover:underline font-medium"
+                    >
+                      + Tambah Opsi
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Image Preview */}
+              {selectedImage && (
+                <div className="relative rounded-xl overflow-hidden max-h-48 border border-slate-700">
+                  <img src={selectedImage} alt="Upload preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setSelectedImage(null)}
+                    className="absolute top-2 right-2 p-1 bg-black/60 text-white rounded-full hover:bg-black"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Tag Controls & Formatting */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/40">
+                <div className="flex items-center gap-2">
+                  {/* Select Tag */}
+                  <select
+                    value={newPostTag}
+                    onChange={(e) => setNewPostTag(e.target.value)}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border outline-none font-medium ${
+                      theme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-300 text-slate-700'
+                    }`}
+                  >
+                    <option value="Curhat">#Curhat</option>
+                    <option value="Tanya">#Tanya</option>
+                    <option value="Komunitas">#Komunitas</option>
+                    <option value="Cinta">#Cinta</option>
+                    <option value="Kampus">#Kampus</option>
+                  </select>
+
+                  {/* Trigger Warning Checkbox */}
+                  <button
+                    type="button"
+                    onClick={() => setIsTW(!isTW)}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1 transition-all ${
+                      isTW 
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' 
+                        : theme === 'dark' ? 'bg-slate-800/40 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <AlertTriangle className="w-3 h-3" /> TW
+                  </button>
+
+                  {/* Toggle Poll Form */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPollForm(!showPollForm)}
+                    className={`p-1.5 rounded-lg border transition-all ${
+                      showPollForm ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' : theme === 'dark' ? 'bg-slate-800/40 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                    }`}
+                    title="Tambah Polling"
+                  >
+                    <Vote className="w-4 h-4" />
+                  </button>
+
+                  {/* Demo Image Attachment */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedImage('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80')}
+                    className={`p-1.5 rounded-lg border transition-all ${
+                      selectedImage ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400' : theme === 'dark' ? 'bg-slate-800/40 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                    }`}
+                    title="Sisipkan Gambar Demo"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Send Button */}
+                <button
+                  type="submit"
+                  disabled={!newPostContent.trim()}
+                  className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-cyan-500/20 transition-all"
+                >
+                  Kirim Pesan
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Search & Navigation Tabs */}
+          <div className="space-y-3">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari kata kunci, tag, atau ID menfess..."
+                className={`w-full pl-10 pr-4 py-2 rounded-xl text-xs border outline-none transition-colors ${
+                  theme === 'dark' ? 'bg-slate-900/60 border-slate-800 text-slate-200 focus:border-cyan-500/50' : 'bg-white border-slate-200 text-slate-800 focus:border-cyan-500'
+                }`}
+              />
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+              {[
+                { id: 'terbaru', label: 'Terbaru' },
+                { id: 'trending', label: '🔥 Trending' },
+                { id: 'saved', label: `Tersimpan (${bookmarkedIds.length})` },
+                ...(user?.role === 'owner' ? [{ id: 'pending', label: `Moderasi Pending (${pendingCount})` }] : [])
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                      : theme === 'dark' ? 'bg-slate-900/40 text-slate-400 hover:text-slate-200' : 'bg-white text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Menfess Feed Timeline */}
+          <div className="space-y-3">
+            {filteredPosts.length === 0 ? (
+              <div className={`p-8 text-center rounded-2xl border ${
+                theme === 'dark' ? 'bg-slate-900/30 border-slate-800 text-slate-500' : 'bg-white border-slate-200 text-slate-400'
+              }`}>
+                <Info className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-xs font-medium">Tidak ada postingan menfess yang ditemukan.</p>
+              </div>
+            ) : (
+              filteredPosts.map(post => (
+                <div 
+                  key={post.id}
+                  className={`p-4 rounded-2xl border transition-all relative ${
+                    post.isPinned ? 'border-cyan-500/40 bg-cyan-500/5' : theme === 'dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+                  }`}
+                >
+                  {/* Pin Indicator */}
+                  {post.isPinned && (
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-cyan-400 mb-2">
+                      <Pin className="w-3 h-3 fill-cyan-400" /> Disematkan oleh Pemilik Base
+                    </div>
+                  )}
+
+                  {/* Post Header */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <img 
+                        src={post.avatar} 
+                        alt="Avatar" 
+                        className="w-8 h-8 rounded-full border border-slate-700 bg-slate-800 object-cover" 
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-200">{post.author}</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                            {post.id}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400">{post.time}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {/* Tag Badge */}
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-cyan-400 border border-slate-700">
+                        #{post.tag}
+                      </span>
+
+                      {/* Owner Controls Menu */}
+                      {user?.role === 'owner' && (
+                        <div className="flex items-center gap-1 ml-2 pl-2 border-l border-slate-800">
+                          {post.status === 'pending' && (
+                            <button
+                              onClick={() => handleApprove(post.id)}
+                              className="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded"
+                              title="Setujui Post"
+                            >
+                              <ShieldCheck className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handlePin(post.id)}
+                            className={`p-1 rounded ${post.isPinned ? 'text-cyan-400 bg-cyan-500/20' : 'text-slate-400 hover:bg-slate-800'}`}
+                            title="Pin Post"
+                          >
+                            <Pin className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(post.id)}
+                            className="p-1 text-red-400 hover:bg-red-500/20 rounded"
+                            title="Hapus Post"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Trigger Warning Badge */}
+                  {post.tw && (
+                    <div className="mb-2 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-medium flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>[Trigger Warning] Konten sensitif</span>
+                    </div>
+                  )}
+
+                  {/* Message Content */}
+                  <p className="text-xs sm:text-sm leading-relaxed mb-3 text-slate-200 whitespace-pre-line">
+                    {post.content}
+                  </p>
+
+                  {/* Poll Display */}
+                  {post.poll && (
+                    <div className="mb-3 p-3 rounded-xl bg-slate-800/40 border border-slate-700/60 space-y-2">
+                      <p className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                        <Vote className="w-3.5 h-3.5" /> {post.poll.question}
+                      </p>
+                      <div className="space-y-1.5">
+                        {post.poll.options.map((opt, idx) => {
+                          const percentage = post.poll.totalVotes > 0 
+                            ? Math.round((opt.votes / post.poll.totalVotes) * 100) 
+                            : 0;
+                          const hasVoted = post.poll.votedOption === idx;
+
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleVotePoll(post.id, idx)}
+                              disabled={post.poll.votedOption !== null}
+                              className={`w-full relative overflow-hidden text-left p-2 rounded-lg border text-xs transition-all ${
+                                hasVoted ? 'border-amber-400 bg-amber-500/10' : 'border-slate-700 hover:bg-slate-800/80'
+                              }`}
+                            >
+                              {/* Vote progress bar background */}
+                              {post.poll.votedOption !== null && (
+                                <div 
+                                  className="absolute top-0 left-0 bottom-0 bg-amber-500/20 transition-all duration-500"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              )}
+                              <div className="relative z-10 flex items-center justify-between">
+                                <span className="font-medium text-slate-200">{opt.text}</span>
+                                {post.poll.votedOption !== null && (
+                                  <span className="font-mono text-[10px] text-slate-400">{percentage}% ({opt.votes})</span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[10px] text-slate-400 text-right">{post.poll.totalVotes} Suara</p>
+                    </div>
+                  )}
+
+                  {/* Image Attachment if exists */}
+                  {post.image && (
+                    <div className="mb-3 rounded-xl overflow-hidden border border-slate-800">
+                      <img src={post.image} alt="Attachment" className="w-full max-h-72 object-cover" />
+                    </div>
+                  )}
+
+                  {/* Interactive Action Bar */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/40 text-xs text-slate-400">
+                    <div className="flex items-center gap-4">
+                      {/* Like */}
+                      <button
+                        onClick={() => handleLike(post.id)}
+                        className={`flex items-center gap-1.5 transition-colors ${
+                          post.isLiked ? 'text-rose-500 font-bold' : 'hover:text-rose-400'
+                        }`}
+                      >
+                        <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-rose-500' : ''}`} />
+                        <span>{post.likes}</span>
+                      </button>
+
+                      {/* Comments */}
+                      <button
+                        onClick={() => setActiveCommentPost(activeCommentPost === post.id ? null : post.id)}
+                        className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>{post.comments.length}</span>
+                      </button>
+
+                      {/* Retweet / Share */}
+                      <button 
+                        onClick={() => showToast('Tautan menfess berhasil disalin!', 'info')}
+                        className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors"
+                      >
+                        <Repeat2 className="w-4 h-4" />
+                        <span>{post.retweets}</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* Bookmark Button */}
+                      <button
+                        onClick={() => handleBookmark(post.id)}
+                        className={`transition-colors ${
+                          bookmarkedIds.includes(post.id) ? 'text-amber-400' : 'hover:text-slate-200'
+                        }`}
+                        title="Simpan Menfess"
+                      >
+                        <Bookmark className={`w-4 h-4 ${bookmarkedIds.includes(post.id) ? 'fill-amber-400' : ''}`} />
+                      </button>
+
+                      <button 
+                        onClick={() => showToast('Tautan menfess disalin ke clipboard', 'info')}
+                        className="hover:text-slate-200"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Comment Section Expandable */}
+                  {activeCommentPost === post.id && (
+                    <div className="mt-3 pt-3 border-t border-slate-800/60 space-y-3">
+                      {/* Comments List */}
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {post.comments.length === 0 ? (
+                          <p className="text-[11px] text-slate-500 italic">Belum ada komentar. Jadilah yang pertama!</p>
+                        ) : (
+                          post.comments.map(c => (
+                            <div key={c.id} className={`p-2 rounded-xl text-xs space-y-0.5 ${c.isOwner ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-slate-800/40'}`}>
+                              <div className="flex items-center justify-between">
+                                <span className={`font-bold text-[11px] ${c.isOwner ? 'text-amber-300 flex items-center gap-1' : 'text-cyan-400'}`}>
+                                  {c.author}
+                                </span>
+                                <span className="text-[9px] text-slate-500">{c.time}</span>
+                              </div>
+                              <p className="text-slate-300">{c.text}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Add Comment Input */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={commentInput}
+                          onChange={(e) => setCommentInput(e.target.value)}
+                          placeholder="Tulis balasan anonim..."
+                          className="flex-1 bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                        />
+                        <button
+                          onClick={() => handleAddComment(post.id)}
+                          className="p-1.5 rounded-xl bg-cyan-500 text-white hover:bg-cyan-600 transition-all"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              ))
+            )}
+          </div>
+
+        </section>
+
+        {/* Right Sidebar Status & Base Rules */}
+        <aside className="lg:col-span-3 space-y-4">
+          
+          {/* Quick Login Info Card */}
+          {!user ? (
+            <div className={`p-4 rounded-2xl border text-center space-y-3 ${
+              theme === 'dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+              <div className="w-10 h-10 rounded-full bg-cyan-500/10 text-cyan-400 flex items-center justify-center mx-auto">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-xs">Akses Pemilik & Pengguna</h3>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Masuk dengan akun Google/Apple untuk mendapat akses penuh atau moderasi base.
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowAuthModal(true); setAuthStep('select'); }}
+                className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold text-xs border border-slate-700 transition-all"
+              >
+                Login Sekarang
+              </button>
+            </div>
+          ) : (
+            <div className={`p-4 rounded-2xl border space-y-2 ${
+              theme === 'dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+              <p className="text-xs font-bold text-slate-300">Detail Sesi Akun</p>
+              <div className="text-[11px] space-y-1 text-slate-400">
+                <p><strong className="text-slate-300">Name:</strong> {user.name}</p>
+                <p><strong className="text-slate-300">Email:</strong> {user.email}</p>
+                <p><strong className="text-slate-300">Metode:</strong> {user.provider}</p>
+                <p><strong className="text-slate-300">Hak Akses:</strong> {user.role === 'owner' ? '👑 Pemilik Base (Full Admin)' : 'Pengguna Standar'}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Trending Tags Widget */}
+          <div className={`p-4 rounded-2xl border space-y-3 ${
+            theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <h3 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Topik Trending
+            </h3>
+            <div className="space-y-2">
+              {[
+                { name: 'CurhatKuliah', count: '1.2k menfess' },
+                { name: 'InfoKampus', count: '850 menfess' },
+                { name: 'DosenSlowrep', count: '540 menfess' },
+                { name: 'RekomendasiCafe', count: '310 menfess' }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs hover:bg-slate-800/30 p-1.5 rounded-lg transition-colors cursor-pointer">
+                  <span className="font-medium text-slate-300">#{item.name}</span>
+                  <span className="text-[10px] text-slate-500">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer Copyright */}
+          <div className="text-[11px] text-slate-500 text-center space-y-1">
+            <p>© 2026 Menfess.id Base Platform.</p>
+            <p>Dikelola oleh Shabik Zanuar (shabikzanuar21@gmail.com)</p>
+          </div>
+
+        </aside>
+
+      </main>
+      )}
+
+      {/* Authentication Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl relative transition-all ${
+            theme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Auth Step 1: Provider Selection */}
+            {authStep === 'select' && (
+              <div className="space-y-5 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mx-auto">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">Masuk ke Menfess.id</h2>
+                  <p className="text-xs text-slate-400 mt-1">Pilih metode autentikasi untuk melanjutkan</p>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  {/* Google Login Button */}
+                  <button
+                    onClick={() => handleSocialLogin('Google')}
+                    className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-800 text-slate-200 text-xs font-semibold transition-all shadow-sm"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>Masuk dengan Google</span>
+                  </button>
+
+                  {/* Apple Login Button */}
+                  <button
+                    onClick={() => handleSocialLogin('Apple')}
+                    className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-700 bg-black hover:bg-slate-900 text-white text-xs font-semibold transition-all shadow-sm"
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 170 170">
+                      <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.34.13-9.16-1.9-14.49-6.07-3.41-2.73-7.37-7.41-11.88-14.04-7.51-11.07-13.23-22.79-17.15-35.16-3.92-12.38-5.88-24.16-5.88-35.34 0-14.1 3.51-25.86 10.53-35.28 7.02-9.42 15.86-14.28 26.52-14.58 4.23 0 9.22 1.12 14.97 3.36 5.75 2.24 9.61 3.36 11.58 3.36 1.63 0 5.42-1.12 11.37-3.36 5.95-2.24 10.74-3.28 14.37-3.13 11.95.76 21.29 5.37 28.02 13.84-10.43 6.32-15.54 15.08-15.33 26.28.22 8.7 3.42 16.03 9.61 21.99 6.19 5.96 13.73 9.27 22.62 9.93-2.18 6.42-4.95 12.8-8.32 19.14zM119.22 31.08c0-6.75 2.47-13.23 7.41-19.44 4.94-6.21 11.08-10.15 18.42-11.82.54 2.07.82 4.03.82 5.88 0 6.64-2.52 13.08-7.56 19.33-5.04 6.25-11.13 10.22-18.27 11.91-.22-1.74-.82-3.69-.82-5.86z"/>
+                    </svg>
+                    <span>Masuk dengan Apple ID</span>
+                  </button>
+                </div>
+
+                <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+                  Login khusus Pemilik Base: <span className="font-mono text-cyan-400">shabikzanuar21@gmail.com</span>
+                </div>
+              </div>
+            )}
+
+            {/* Auth Step 2: Owner Password Verification */}
+            {authStep === 'owner_pass' && (
+              <form onSubmit={handleOwnerAuth} className="space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm">Verifikasi Pemilik Base</h3>
+                    <p className="text-[11px] text-slate-400">{loginEmail}</p>
+                  </div>
+                </div>
+
+                {authError && (
+                  <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                    {authError}
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">Password Owner</label>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Masukkan password pemilik..."
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold transition-all shadow-lg shadow-amber-500/20"
+                >
+                  Verifikasi Sebagai Owner
+                </button>
+              </form>
+            )}
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+```
